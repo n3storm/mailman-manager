@@ -3,49 +3,45 @@ from manager import MailmanServer
 
 mylists = MailmanServer()
 
+#MailmanServer has
+# lists: a Lists object with all List object
+# membership: for global members methods, like find
+#MailmanServer > Lists has:
+# 
+
 for mlist in MailmanServer().lists.all():
     print mlist.full_name()
-#~ {'email': fu@fufufu, 'owner'}
+    # full_name is the form name@hostname
 
-#~ listas = mylists.all()
-#~ for lista in mylists.all():
-    #~ print "--------n---------\n"
-    #~ print lista.config().real_name
-    #~ print lista.config().owner
-    #~ print lista.full_name()
+#You can use get to select one list:
+testlist = mylists.lists.get('testlist@lists.example.com')
 
-#~ pruebas = mylists.get('pruebas@lists.getcloud.info').members()
-pruebas = mylists.lists.get('pruebas@lists.getcloud.info')
-tests = mylists.lists['test00@m.coolbleiben.coop']
+#Or select it like a dictionary:
+otherlist = mylists.lists['otherlist@lists.example.com']
 
-print ">>>>>>>>>>>>>>> %s" % tests.full_name()
+#Retrieving full config of a list is expensive, do not abuse or catch it in your application:
+print mylists.lists['spamlist@lists.example.com'].config()
 
-pruebas.configure(owner=['fuu',])
-#~ print pruebas
-#~ print pruebas.members()
-pruebas.members.add('nestor@barriolinux.es')
-#~ print pruebas.members()
-#~ pruebas.password('menelao')
-#~ 
-#~ print listas
-#~ print listas
-#~ print listas[1].name
-#~ print "\nMembers:\n"
-#~ print listas[1].members()
-#~ print "\nConfig:\n"
-#~ anuncios = listas[1].config()
-#~ print anuncios.real_name
-#~ print listas[2].config().real_name   
+#Configure a list using kwargs:
+testlist.configure(owner=['fuu@example.com',])
 
-print "\nFind josue:\n"
-#~ found = mylists.find('josue')
-found = mylists.membership().find('josue', restrict_to = ['pruebas'])
-print found[0]['list'].config()
+#Here there are subscribed and owners emails:
+testlist.members()
 
-print mylists.lists.filter('getcloud.info')
-for lista in  mylists.lists.filter('getcloud.info'):
-    print lista.members.all()
+#Add a member is as simple as this:
+testlist.members.add('nestor@coolbleiben.coop')
 
-#~ getcloud = mylists.filter('getcloud.info')
-#~ print getcloud
-#~ print mylists.find('nestor')[1]
+print testlist.members()
+
+#Change list password for admin:
+testlist.password('ourpassword')
+#Another way:
+mylists.lists['spamlist@lists.example.com'].password('anotherpassword')
+
+#Find if an email is subscribed in some or all the lists:
+found = mylists.membership().find('john', restrict_to = ['testlist',])
+
+#Find all lists with hostname lists.otherexample.com:
+print mylists.lists.filter('lists.otherexample.com')
+for nlist in mylists.lists.filter('lists.otherexample.com'):
+    print nlist
