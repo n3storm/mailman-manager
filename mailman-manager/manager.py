@@ -1,61 +1,9 @@
 # -*- coding: utf-8 -*-
-import subprocess, os
+import os
+from jinja2 import Template
+from utils import run, populate
 
 BIN = '/usr/lib/mailman/bin/'
-
-#for caching
-from hashlib import sha1
-import time
-import pickle
-
-from jinja2 import Template
-
-def cache_disk(seconds = 30, cache_folder="/tmp"):  
-    def doCache(f):  
-        def inner_function(*args, **kwargs):  
-  
-            # calculate a cache key based on the decorated method signature  
-            key = sha1(str(f.__module__) + str(f.__name__) + str(args) + str(kwargs)).hexdigest() + '.mailmanorm'  
-            filepath = os.path.join(cache_folder, key)  
-  
-            # verify that the cached object exists and is less than $seconds old  
-            if os.path.exists(filepath):  
-                modified = os.path.getmtime(filepath)  
-                age_seconds = time.time() - modified  
-                if age_seconds < seconds:  
-                    return pickle.load(open(filepath, "rb"))  
-  
-            # call the decorated function...  
-            result = f(*args, **kwargs)  
-  
-            # ... and save the cached object for next time  
-            pickle.dump(result, open(filepath, "wb"))  
-  
-            return result  
-        return inner_function  
-    return doCache  
-
-@cache_disk(seconds = 60, cache_folder="/tmp")
-def run(cmd, *args):
-    cmd = cmd % args
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-    output = []
-    for line in p.stdout:
-        output.append(line)
-        #~ if "find_members" in cmd:
-            #~ print output
-    return output
-
-def populate(action, items, list_name = None):
-    file_path = "lists/%s.txt" % action
-    if list_name:
-        file_path = "lists/%s/%s.txt" % (list_name, action)
-    f = open('%s' % file_path, 'w')
-    for item in items:
-        f.write("%s\n" % item)
-    f.close()
-    return file_path
-    
 
 
 class Membership(object):
@@ -144,26 +92,7 @@ class List(object):
     def __init__(self, name):
         self.name = name
         self.members = Membership(name = name)
-        #~ self.members = self._members()
-        #~ self.config = self._config()
 
-    def configure(self, **kwargs):
-        #~ print dir(self.config())
-        D = dict([(varname,getattr(self.config(),varname))
-                    for varname in dir(self.config())
-                    if not varname.startswith("_") ]) 
-        for key, value in kwargs.items():
-            if key in D and key in self.allowed_changes:
-                print(key,value)
-                D[key] = value
-        values = D        
-        f = open('template/conf.py')
-        t = Template(f.read())
-        path = "lists/%s/%s" % (self.name.replace('.', ''), "conf.py")
-        file_config = open(path, 'w')
-        file_config.write(t.render(values))
-        file_config.close()
-        #~ "lists/%s/"
 
     def __unicode__(self):
         return u'%s' % self.name
@@ -190,6 +119,23 @@ class List(object):
         touch = run(self.touch_cmd, directory)
         conf_module = __import__('lists.%s.conf' % self.name.replace('.', ''), globals(), locals(), -1)
         return conf_module
+
+    def configure(self, **kwargs):
+        D = dict([(varname,getattr(self.config(),varname))
+                    for varname in dir(self.config())
+                    if not varname.startswith("_") ]) 
+        for key, value in kwargs.items():
+            if key in D and key in self.allowed_changes:
+                print(key,value)
+                D[key] = value
+        values = D        
+        f = open('template/conf.py')
+        t = Template(f.read())
+        path = "lists/%s/%s" % (self.name.replace('.', ''), "conf.py")
+        file_config = open(path, 'w')
+        file_config.write(t.render(values))
+        file_config.close()
+
 
 class Lists(object):
     all_cmd = BIN + "list_lists -b"
